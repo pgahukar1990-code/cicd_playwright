@@ -17,6 +17,6 @@ test("My Fourth Test",async function name({page}) {
    expect(true).toBeFalsy();
 });
 
-test.only("My Fifth Test",async function name({page}) {
+test("My Fifth Test",async function name({page}) {
    expect("Prajot Gahukar".includes("Prajot")).toBeTruthy();
 });
