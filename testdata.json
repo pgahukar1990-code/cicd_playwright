@@ -1,0 +1,14 @@
+{
+    "username": "admin@email.com",
+    "password": "admin@123",
+    "name":"prajot",
+    "interests":["Cypress","Java","API"],
+    "Address":{
+        "area":"wakad",
+        "city":"pune",
+        "pin":411057
+
+    }
+
+    
+}

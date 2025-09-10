@@ -1,0 +1,5 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","8229","Login to Application using data from JSON file","Google Chrome","Wed Sep 10 09:59:47 IST 2025","passed","Wed Sep 10 09:59:55 IST 2025","Data Driven Login Test > Login with multipe data sets 3","loginUsingDataFromJson.spec.js","",""
+"","5753","Login to Application using data from JSON file","Google Chrome","Wed Sep 10 09:59:47 IST 2025","passed","Wed Sep 10 09:59:53 IST 2025","Data Driven Login Test > Login with multipe data sets 2","loginUsingDataFromJson.spec.js","",""
+"","7517","Login to Application using data from JSON file","Google Chrome","Wed Sep 10 09:59:47 IST 2025","passed","Wed Sep 10 09:59:54 IST 2025","Data Driven Login Test > Login with multipe data sets 4","loginUsingDataFromJson.spec.js","",""
+"","6030","Login to Application using data from JSON file","Google Chrome","Wed Sep 10 09:59:47 IST 2025","passed","Wed Sep 10 09:59:53 IST 2025","Data Driven Login Test > Login with multipe data sets 1","loginUsingDataFromJson.spec.js","",""
