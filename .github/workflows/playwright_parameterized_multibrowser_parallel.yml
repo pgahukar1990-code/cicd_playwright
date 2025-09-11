@@ -1,0 +1,60 @@
+name: Playwright Parameterized MultiBrowser Parallel with Allure Reporting
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to run tests against"
+        required: true
+        default: "main"
+      test_target:
+        description: "Test file or pattern (e.g. dropdown.spec.js, tests/auth/, -g 'title')"
+        required: false
+        default: ""
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
+        shard: ["1/3", "2/3", "3/3"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests with Allure
+        run: |
+          TARGET=""
+          if [ -n "${{ github.event.inputs.test_target }}" ]; then
+            if [[ "${{ github.event.inputs.test_target }}" == *.spec.* ]]; then
+              TARGET="tests/${{ github.event.inputs.test_target }}"
+            else
+              TARGET="${{ github.event.inputs.test_target }}"
+            fi
+          fi
+
+          npx playwright test $TARGET \
+            --project="${{ matrix.project }}" \
+            --shard=${{ matrix.shard }} \
+            --reporter=line,allure-playwright
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ matrix.project }}-${{ matrix.shard }}
+          path: allure-results
