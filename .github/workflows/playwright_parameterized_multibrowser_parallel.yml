@@ -1,90 +1,65 @@
-name: Playwright Parameterized MultiBrowser Parallel with Allure Reporting
+name: Playwright Tests with Allure
 
 on:
-  workflow_dispatch:
-    inputs:
-      test_target:
-        description: "Test file or pattern (e.g. dropdown.spec.js, tests/auth/, -g 'title')"
-        required: false
-        default: ""
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
+  # --- Run tests in shards ---
   test:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        project: [chromium, firefox, "Google Chrome"]   # 👈 multiple browsers
-        shard: ["1/3", "2/3", "3/3"]
-
+        shardIndex: [1, 2, 3]   # split into 3 shards (adjust as needed)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Install Playwright browsers
+      - name: Install browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests with Allure
-        run: |
-          TARGET=""
-          if [ -n "${{ github.event.inputs.test_target }}" ]; then
-            if [[ "${{ github.event.inputs.test_target }}" == *.spec.* ]]; then
-              TARGET="tests/${{ github.event.inputs.test_target }}"
-            else
-              TARGET="${{ github.event.inputs.test_target }}"
-            fi
-          fi
-
-          npx playwright test $TARGET \
-            --project="${{ matrix.project }}" \
-            --shard=${{ matrix.shard }} \
-            --reporter=line,allure-playwright
+      - name: Run Playwright tests (shard ${{ matrix.shardIndex }})
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/3 --reporter=line,allure-playwright
 
       - name: Upload Allure results
-        if: always()
-        run: |
-          SAFE_PROJECT=$(echo "${{ matrix.project }}" | tr ' ' '_' )
-          SAFE_SHARD=$(echo "${{ matrix.shard }}" | sed 's/\//-/g')
-          ARTIFACT_NAME="allure-results-${SAFE_PROJECT}-${SAFE_SHARD}"
-
-          echo "Uploading artifact: $ARTIFACT_NAME"
-
-          mkdir -p upload-results
-          cp -r allure-results/* upload-results/ || true
-
-          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_ENV
-
-      - uses: actions/upload-artifact@v4
-        if: always()
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: upload-results
+          name: allure-results-${{ matrix.shardIndex }}
+          path: allure-results
 
+  # --- Merge results and generate report ---
   merge-report:
     runs-on: ubuntu-latest
     needs: test
-    if: always()
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v3
+
+      - name: Download Allure results from all shards
+        uses: actions/download-artifact@v3
         with:
-          path: ./allure-results
+          path: ./allure-artifacts
 
-      - name: Merge and generate Allure report
+      - name: Merge Allure results
         run: |
-          mkdir -p merged-results
-          find ./allure-results -type d -exec cp -r {}/* merged-results/ \;
-          npx allure generate merged-results --clean -o allure-report
+          mkdir merged-results
+          cp -r allure-artifacts/*/* merged-results/ || true
 
-      - name: Upload merged Allure report
-        uses: actions/upload-artifact@v4
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline --save-dev
+
+      - name: Generate Allure report
+        run: npx allure generate merged-results --clean -o allure-report
+
+      - name: Upload Allure HTML report
+        uses: actions/upload-artifact@v3
         with:
           name: allure-report
           path: allure-report
-          retention-days: 30
+          retention-days: 7
