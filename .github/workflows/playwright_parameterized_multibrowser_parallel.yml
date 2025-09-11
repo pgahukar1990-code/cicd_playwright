@@ -41,6 +41,7 @@ jobs:
             fi
           fi
 
+          # run tests
           npx playwright test $TARGET \
             --project="${{ matrix.project }}" \
             --shard=${{ matrix.shard }} \
@@ -48,15 +49,23 @@ jobs:
 
       - name: Upload Allure results
         if: always()
+        run: |
+          SAFE_SHARD=$(echo "${{ matrix.shard }}" | sed 's/\//-/g')
+          mkdir -p renamed-results/$SAFE_SHARD
+          cp -r allure-results/* renamed-results/$SAFE_SHARD/ || true
+
+        # upload renamed artifacts
+      - name: Upload renamed Allure results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-${{ matrix.project }}-${{ matrix.shard//\//- }}
-          path: allure-results
+          name: allure-results-${{ matrix.project }}-${{ matrix.shard }}
+          path: renamed-results
 
   merge-report:
     runs-on: ubuntu-latest
     needs: test
-    if: always()   # ✅ ensures it runs even if tests fail
+    if: always()
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -66,7 +75,7 @@ jobs:
       - name: Merge and generate Allure report
         run: |
           mkdir -p merged-results
-          find ./allure-results -type d -name "allure-results*" -exec cp -r {}/* merged-results/ \;
+          find ./allure-results -type d -exec cp -r {}/* merged-results/ \;
           npx allure generate merged-results --clean -o allure-report
 
       - name: Upload merged Allure report
@@ -74,4 +83,4 @@ jobs:
         with:
           name: allure-report
           path: allure-report
-          retention-days: 30   # 🗂 longer retention for full report
+          retention-days: 30
