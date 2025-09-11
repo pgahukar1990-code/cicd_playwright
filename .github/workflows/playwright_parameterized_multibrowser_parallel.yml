@@ -1,17 +1,16 @@
 name: Playwright Tests with Allure
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
+  workflow_dispatch:   # manual trigger only
 
 jobs:
-  # --- Run tests in shards ---
+  # --- Run tests in shards across all browsers ---
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shardIndex: [1, 2, 3]   # split into 3 shards (adjust as needed)
+        browser: [chromium, firefox, Google Chrome]   # 3 browsers
+        shardIndex: [1, 2, 3]   # 3 shards
     steps:
       - uses: actions/checkout@v3
 
@@ -25,13 +24,13 @@ jobs:
       - name: Install browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests (shard ${{ matrix.shardIndex }})
-        run: npx playwright test --shard=${{ matrix.shardIndex }}/3 --reporter=line,allure-playwright
+      - name: Run Playwright tests (shard ${{ matrix.shardIndex }} on ${{ matrix.browser }})
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/3 --project=${{ matrix.browser }} --reporter=line,allure-playwright
 
       - name: Upload Allure results
         uses: actions/upload-artifact@v3
         with:
-          name: allure-results-${{ matrix.shardIndex }}
+          name: allure-results-${{ matrix.browser }}-${{ matrix.shardIndex }}
           path: allure-results
 
   # --- Merge results and generate report ---
@@ -41,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download Allure results from all shards
+      - name: Download Allure results from all shards & browsers
         uses: actions/download-artifact@v3
         with:
           path: ./allure-artifacts
@@ -62,4 +61,3 @@ jobs:
         with:
           name: allure-report
           path: allure-report
-          retention-days: 7
