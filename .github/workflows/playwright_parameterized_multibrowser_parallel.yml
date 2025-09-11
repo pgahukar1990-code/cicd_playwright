@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         project: [chromium, firefox, webkit]
-        shard: ["1-3", "2-3", "3-3"] # safe format, no "/"
+        shard: ["1/3", "2/3", "3/3"]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,10 +32,6 @@ jobs:
 
       - name: Run Playwright tests with Allure
         run: |
-          # Convert safe shard format "1-3" -> "1/3"
-          SHARD="${{ matrix.shard }}"
-          SHARD="${SHARD/-//}"
-
           TARGET=""
           if [ -n "${{ github.event.inputs.test_target }}" ]; then
             if [[ "${{ github.event.inputs.test_target }}" == *.spec.* ]]; then
@@ -45,17 +41,40 @@ jobs:
             fi
           fi
 
-          echo "▶ Running Playwright tests on project=${{ matrix.project }} shard=$SHARD target=$TARGET"
-
           npx playwright test $TARGET \
             --project="${{ matrix.project }}" \
-            --shard=$SHARD \
+            --shard=${{ matrix.shard }} \
             --reporter=line,allure-playwright
+
+      - name: Set safe shard name
+        id: shard_name
+        run: echo "SAFE_SHARD=$(echo ${{ matrix.shard }} | sed 's|/|-|g')" >> $GITHUB_ENV
 
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-${{ matrix.project }}-${{ matrix.shard }}
+          name: allure-results-${{ matrix.project }}-${{ env.SAFE_SHARD }}
           path: allure-results
+
+  merge-report:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./allure-results
+
+      - name: Merge and generate Allure report
+        run: |
+          mkdir -p merged-results
+          find ./allure-results -type d -name "allure-results*" -exec cp -r {}/* merged-results/ \;
+          npx allure generate merged-results --clean -o allure-report
+
+      - name: Upload merged Allure report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
           retention-days: 30
