@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        browser: [chromium, firefox, webkit]
+        browser: [chromium, firefox, "Google Chrome"]
         shardIndex: [1, 2, 3]   # 3 shards
     steps:
       - uses: actions/checkout@v3
@@ -71,3 +71,4 @@ jobs:
         with:
           name: allure-report
           path: allure-report
+          retention-days: 7
