@@ -3,10 +3,6 @@ name: Playwright Parameterized MultiBrowser Parallel with Allure Reporting
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to run tests against"
-        required: true
-        default: "main"
       test_target:
         description: "Test file or pattern (e.g. dropdown.spec.js, tests/auth/, -g 'title')"
         required: false
@@ -19,12 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         project: [chromium, firefox, webkit]
-        shard: ["1/3", "2/3", "3/3"]
+        shard: ["1-3", "2-3", "3-3"] # safe format, no "/"
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - uses: actions/setup-node@v4
         with:
@@ -38,6 +32,10 @@ jobs:
 
       - name: Run Playwright tests with Allure
         run: |
+          # Convert safe shard format "1-3" -> "1/3"
+          SHARD="${{ matrix.shard }}"
+          SHARD="${SHARD/-//}"
+
           TARGET=""
           if [ -n "${{ github.event.inputs.test_target }}" ]; then
             if [[ "${{ github.event.inputs.test_target }}" == *.spec.* ]]; then
@@ -47,9 +45,11 @@ jobs:
             fi
           fi
 
+          echo "▶ Running Playwright tests on project=${{ matrix.project }} shard=$SHARD target=$TARGET"
+
           npx playwright test $TARGET \
             --project="${{ matrix.project }}" \
-            --shard=${{ matrix.shard }} \
+            --shard=$SHARD \
             --reporter=line,allure-playwright
 
       - name: Upload Allure results
@@ -58,3 +58,4 @@ jobs:
         with:
           name: allure-results-${{ matrix.project }}-${{ matrix.shard }}
           path: allure-results
+          retention-days: 30
