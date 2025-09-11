@@ -3,28 +3,30 @@ name: Playwright Parameterized Tests
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: "Branch to run tests against"
+        required: true
+        default: "main"
       test_target:
-        description: "Test file, title, or pattern to run (e.g. dropdown.spec.js, -g 'title', --project=chromium)"
+        description: "Test file, title, or pattern (e.g. dropdown.spec.js, -g 'title', --project=chromium)"
         required: false
         default: ""
       test_command:
-        description: "Playwright test command (takes priority over test_target)"
+        description: "Playwright test command (overrides test_target)"
         required: false
         default: "npx playwright test"
       retention_days:
         description: "Artifact retention (days)"
         required: false
         default: "30"
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}   # 👈 checkout selected branch
 
       - uses: actions/setup-node@v4
         with:
@@ -42,7 +44,7 @@ jobs:
             echo "▶ Running custom test command"
             ${{ github.event.inputs.test_command }}
           elif [ -n "${{ github.event.inputs.test_target }}" ]; then
-            echo "▶ Running with test_target"
+            echo "▶ Running test target: ${{ github.event.inputs.test_target }}"
             if [[ "${{ github.event.inputs.test_target }}" == *.spec.* ]]; then
               npx playwright test tests/${{ github.event.inputs.test_target }}
             else
