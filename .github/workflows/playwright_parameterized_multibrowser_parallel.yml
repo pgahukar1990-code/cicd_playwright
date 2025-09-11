@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit]
+        project: [chromium, firefox, Google Chrome]   # 👈 multiple browsers
         shard: ["1/3", "2/3", "3/3"]
 
     steps:
@@ -46,20 +46,17 @@ jobs:
             --shard=${{ matrix.shard }} \
             --reporter=line,allure-playwright
 
-      - name: Set safe shard name
-        id: shard_name
-        run: echo "SAFE_SHARD=$(echo ${{ matrix.shard }} | sed 's|/|-|g')" >> $GITHUB_ENV
-
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-${{ matrix.project }}-${{ env.SAFE_SHARD }}
+          name: allure-results-${{ matrix.project }}-${{ matrix.shard//\//- }}
           path: allure-results
 
   merge-report:
     runs-on: ubuntu-latest
     needs: test
+    if: always()   # ✅ ensures it runs even if tests fail
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -77,4 +74,4 @@ jobs:
         with:
           name: allure-report
           path: allure-report
-          retention-days: 30
+          retention-days: 30   # 🗂 longer retention for full report
